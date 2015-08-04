@@ -1,7 +1,10 @@
 package com.kernan.dan.sunshine.app;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.text.format.Time;
 import android.util.Log;
 
@@ -35,8 +38,16 @@ public class FetchWeatherTask extends AsyncTask<String, Integer ,String[]> {
     /**
      * Prepare the weather high/lows for presentation.
      */
-    private String formatHighLows(double high, double low) {
+    private String formatHighLows(double high, double low,String unitType) {
         // For presentation, assume the user doesn't care about tenths of a degree.
+        Context context = MainActivity.getAppContext();
+
+                    if (unitType.equals(context.getString(R.string.pref_units_imperial))) {
+                            high = (high * 1.8) + 32;
+                            low = (low * 1.8) + 32;
+                        } else if (!unitType.equals(context.getString(R.string.pref_units_metric))) {
+                            Log.d(LOG_TAG, "Unit type not found: " + unitType);
+                        }
         long roundedHigh = Math.round(high);
         long roundedLow = Math.round(low);
 
@@ -109,8 +120,18 @@ public class FetchWeatherTask extends AsyncTask<String, Integer ,String[]> {
             JSONObject temperatureObject = dayForecast.getJSONObject(OWM_TEMPERATURE);
             double high = temperatureObject.getDouble(OWM_MAX);
             double low = temperatureObject.getDouble(OWM_MIN);
+            //Trying to scheme a way to get context
+            Context context = MainActivity.getAppContext();
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(context);
 
-            highAndLow = formatHighLows(high, low);
+
+            SharedPreferences sharedPrefs =
+                                        PreferenceManager.getDefaultSharedPreferences(context);
+                        String unitType = sharedPrefs.getString((context.getString(R.string.pref_units_key)),
+                                        context.getString(R.string.pref_units_metric));
+
+            highAndLow = formatHighLows(high, low,unitType);
+
             resultStrs[i] = day + " - " + description + " - " + highAndLow;
         }
 
@@ -118,8 +139,9 @@ public class FetchWeatherTask extends AsyncTask<String, Integer ,String[]> {
             //Log.v(LOG_TAG, "Forecast entry: " + s);
         }
         return resultStrs;
-
     }
+
+
     protected String[] doInBackground(String... params) {
         // These two need to be declared outside the try/catch
 // so that they can be closed in the finally block.
